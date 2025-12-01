@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ODATA Service</title>
+    <link rel="stylesheet" href="./index.css"/>
+</head>
+<body>
+
+<h1>ODATA Service</h1>
+
+<!-- GET Request Buttons -->
+<div class="btn-area">
+    <button class="api-btn" id="getStudents">Get Students</button>
+    <button class="api-btn" id="getCourses">Get Courses</button>
+</div>
+
+<!-- Toggle Switch -->
+<div class="toggle-container" id="toggle">
+    <div class="slider" id="slider"></div>
+    <div class="toggle-btn" id="studentBtn">Students</div>
+    <div class="toggle-btn" id="courseBtn">Courses</div>
+</div>
+
+<!-- Dynamic Table -->
+<table id="dataTable">
+    <thead id="tableHead"></thead>
+    <tbody id="tableBody"></tbody>
+</table>
+
+<script>
+    let currentTab = "students";
+
+    const slider = document.getElementById("slider");
+    const studentBtn = document.getElementById("studentBtn");
+    const courseBtn = document.getElementById("courseBtn");
+
+    studentBtn.addEventListener("click", () => toggleView("students"));
+    courseBtn.addEventListener("click", () => toggleView("courses"));
+
+    function toggleView(type) {
+        currentTab = type;
+
+        if (type === "students") {
+            slider.style.left = "5px";
+
+            // Load from cache if exists
+            const cached = localStorage.getItem("students");
+            if (cached) {
+                loadStudentTable();
+                fillStudentTable(JSON.parse(cached));
+                return;
+            }
+
+            loadStudentTable(); // default empty table
+        } else {
+            slider.style.left = "50%";
+
+            const cached = localStorage.getItem("courses");
+            if (cached) {
+                loadCourseTable();
+                fillCourseTable(JSON.parse(cached));
+                return;
+            }
+
+            loadCourseTable();
+        }
+    }
+
+    // ---------------------
+    // Table structure setup
+    // ---------------------
+    function loadStudentTable() {
+        document.getElementById("tableHead").innerHTML = `
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Address</th>
+                <th>Phone</th>
+                <th>Email</th>
+            </tr>`;
+        document.getElementById("tableBody").innerHTML = "";
+    }
+
+    function loadCourseTable() {
+        document.getElementById("tableHead").innerHTML = `
+            <tr>
+                <th>Course ID</th>
+                <th>Student ID</th>
+                <th>Course Name</th>
+                <th>Course Description</th>
+            </tr>`;
+        document.getElementById("tableBody").innerHTML = "";
+    }
+
+    // -------------------------
+    // GET STUDENTS with caching
+    // -------------------------
+    document.getElementById("getStudents").addEventListener("click", async () => {
+
+        // Check cache first
+        const cached = localStorage.getItem("students");
+        if (cached) {
+            const list = JSON.parse(cached);
+            loadStudentTable();
+            fillStudentTable(list);
+            return;
+        }
+
+        // First time → call API
+        const res = await fetch("/students");
+        const data = await res.json();
+        const list = data.d.results;
+
+        // Store in local storage
+        localStorage.setItem("students", JSON.stringify(list));
+
+        loadStudentTable();
+        fillStudentTable(list);
+    });
+
+    // ------------------------
+    // GET COURSES with caching
+    // ------------------------
+    document.getElementById("getCourses").addEventListener("click", async () => {
+
+        // Check cache first
+        const cached = localStorage.getItem("courses");
+        if (cached) {
+            const list = JSON.parse(cached);
+            loadCourseTable();
+            fillCourseTable(list);
+            return;
+        }
+
+        // First time → call API
+        const res = await fetch("/courses");
+        const data = await res.json();
+        const list = data.d.results;
+
+        // Save to local storage
+        localStorage.setItem("courses", JSON.stringify(list));
+
+        loadCourseTable();
+        fillCourseTable(list);
+    });
+
+    // -------------------------
+    // Fill tables
+    // -------------------------
+    function fillStudentTable(list) {
+        let rows = "";
+        list.forEach(item => {
+            rows += `
+            <tr>
+                <td>${item.StdId}</td>
+                <td>${item.StdName}</td>
+                <td>${item.StdAddress}</td>
+                <td>${item.StdPhone}</td>
+                <td>${item.StdMail}</td>
+            </tr>`;
+        });
+        document.getElementById("tableBody").innerHTML = rows;
+    }
+
+    function fillCourseTable(list) {
+        let rows = "";
+        list.forEach(item => {
+            rows += `
+            <tr>
+                <td>${item.CourseId}</td>
+                <td>${item.StdId}</td>
+                <td>${item.CourseName}</td>
+                <td>${item.CourseDesc}</td>
+            </tr>`;
+        });
+        document.getElementById("tableBody").innerHTML = rows;
+    }
+
+    // Default load
+    loadStudentTable();
+</script>
+
+</body>
+</html>
